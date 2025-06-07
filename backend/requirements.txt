@@ -3,13 +3,14 @@ beautifulsoup4==4.12.2
 python-dotenv==1.0.0
 asyncio
 flask
-openai
+openai>=1.0.0
 pinecone
 requests
 flask-cors
 dirtyjson
 scikit-image
-sentence-transformers
 scipy
 numpy
 imagehash
+Pillow>=9.0.0
+opencv-python>=4.8.0
