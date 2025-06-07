@@ -4,46 +4,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Frontend Editor</title>
+    <link rel="stylesheet" href="global.css">
     <style>
-        body {
-            margin: 0;
-            padding: 0;
+        .button-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            background: linear-gradient(135deg, #fff1f1, #fffce1, #fff7f3);
-        }
-        .button-container {
-            display: flex;
-            gap: 8px;
+            gap: var(--spacing-300);
+            padding: var(--spacing-300);
+            background: var(--gradient-highlight-horizontal);
+            border-radius: 50px;
         }
         .button {
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-            border: none;
-            cursor: pointer;
-            transition: opacity 0.3s;
-        }
-        .button-blue {
-            background-color: #4c4cf1;
-            color: white;
-        }
-        .button-black {
-            background-color: #000;
-            color: white;
-        }
-        .button:hover {
-            opacity: 0.9;
+            padding: 13px 26px;
+            border-radius: 22px;
+            font-size: var(--body-font-size-m);
+            font-weight: 600;
         }
     </style>
 </head>
 <body>
-    <div class="button-container">
-        <button class="button button-blue">Start 30-day free trial</button>
-        <button class="button button-black">Get Adobe Express Free</button>
-    </div>
+    <main>
+        <div class="button-container">
+            <a href="#" class="button primaryCTA">Start 30-day free trial</a>
+            <a href="#" class="button primary">Get Adobe Express Free</a>
+        </div>
+    </main>
 </body>
 </html>

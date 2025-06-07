@@ -6,6 +6,7 @@ from PIL import Image
 import numpy as np
 import imagehash
 from openai import OpenAI
+from io import BytesIO
 
 load_dotenv()
 
@@ -63,11 +64,21 @@ async def modify(current, iteration_count, target_image_path, screenshot_image):
     with open(current, 'r', encoding='utf-8') as file:
         html_content = file.read()
     
+    # Read the global.css content
+    css_path = os.path.join(os.path.dirname(current), 'global.css')
+    with open(css_path, 'r', encoding='utf-8') as file:
+        css_content = file.read()
+    
     # Encode the target image as base64
     with open(target_image_path, "rb") as image_file:
         base64_image = base64.b64encode(image_file.read()).decode('utf-8')
     
-    base64_screenshot_image = base64.b64encode(screenshot_image.read()).decode('utf-8')
+    # Convert PIL Image to base64 properly
+    buffer = BytesIO()
+    screenshot_image.save(buffer, format='PNG')
+    buffer.seek(0)
+    base64_screenshot_image = base64.b64encode(buffer.read()).decode('utf-8')
+    
     # Query OpenAI to modify the HTML file
     try:
         response = client.chat.completions.create(
@@ -75,18 +86,18 @@ async def modify(current, iteration_count, target_image_path, screenshot_image):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are an expert HTML/CSS developer. Your task is to modify HTML files to better match a target visual design shown in the image. Return only the modified HTML code, no explanations."
+                    "content": """You are an expert HTML/CSS developer. Your task is to modify HTML files to better match a target visual design shown in the image. 
+                    You have access to a global.css file with predefined styles and variables. Use these existing styles when possible instead of inline styles.
+                    Pay special attention to using the correct button classes, spacing variables, and grid system defined in the CSS.
+                    Return only the modified HTML code, no explanations."""
                 },
                 {
                     "role": "user",
                     "content": [
                         {
                             "type": "text",
-                            "text": f"""Here is the current HTML code that needs to be modified:\n\n{html_content}\n\nPlease modify this 
-                            HTML to make it visually match the target design shown in the image. 
-                            Focus on layout, styling, colors, fonts, spacing, and all visual elements. 
-                            Return only the complete modified HTML code. The first image is the target image, and the second image 
-                            is the current state of the HTML"""
+                            "text": f"""The first image is the target image, and the second image 
+                            is the current state of my document. What should be done to make the second image match the first image?"""
                         },
                         {
                             "type": "image_url",
@@ -94,14 +105,35 @@ async def modify(current, iteration_count, target_image_path, screenshot_image):
                                 "url": f"data:image/png;base64,{base64_image}",
                                 "detail": "high"
                             }
-                        },{
+                        },
+                        {
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/png;base64,{base64_screenshot_image}",
                                 "detail": "high"
                             }
                         }
-
+                    ]
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"""Here is the current HTML code that needs to be modified:\n\n{html_content}\n\n
+                            Here is the global.css file with available styles:\n\n{css_content}\n\n
+                            Based on your previous assessment, please modify this HTML to make it visually match the target design shown in the image.
+                            Use the predefined classes and variables from global.css as a starting point, but feel free to make a local stylesheet
+                            to override the global styles if it gets closer to the target design.
+                            Pay special attention to:
+                            1. Button styles (primary, secondary, dark, gradient, etc.)
+                            2. Spacing variables (--spacing-100 through --spacing-1000)
+                            3. Grid system (ax-grid-* classes)
+                            4. Font sizes and colors
+                            Return only the complete modified HTML code.
+                            Feel free to use placeholder images and text if you think it will help.
+                            """
+                        }
                     ]
                 }
             ],
@@ -127,9 +159,9 @@ async def modify(current, iteration_count, target_image_path, screenshot_image):
 
 async def main(target, start):
     score = 0
-    threshold = 0.9
+    threshold = 0.95
     iteration_count = 0
-    max_iteration_count = 10
+    max_iteration_count = 20
     
     # Load the target file here and set target_image, target width and target height with the loaded image
     target_image = Image.open(target)
@@ -183,13 +215,15 @@ async def main(target, start):
 
         while (iteration_count < max_iteration_count):
             score, screenshot_image = await compare(current_context, current, target_image, target_width, target_height, iteration_count)
+            print('------------')
+            print(score)
+            print('------------')
             if (score > threshold):
                 print("Successfully edited component to threshold")
                 await browser.close()
                 return
             current = await modify(current, iteration_count, target, screenshot_image)
-            print('------------')
-            print(score)
+          
             iteration_count += 1
         print("Failed to reach goal by max iteration count")
         await browser.close()
